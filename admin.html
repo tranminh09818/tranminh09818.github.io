@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trang Quản Trị Người Dùng</title>
+    <style>
+        :root {
+            --primary-color: #d35400;
+            --secondary-color: #fceabb;
+            --background-gradient: linear-gradient(135deg, #fceabb 0%, #f8b500 100%);
+            --shadow-color: rgba(0, 0, 0, 0.15);
+            --btn-delete-bg: #e74c3c;
+            --btn-clear-bg: #3498db;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--background-gradient);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            width: 95%;
+            max-width: 1200px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        table, th, td {
+            border: 1px solid #e0e0e0;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: center;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .btn-delete {
+            background-color: var(--btn-delete-bg);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-delete:hover {
+            background-color: #c23b2b;
+        }
+
+        .btn-clear {
+            background-color: var(--btn-clear-bg);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .btn-clear:hover {
+            background-color: #2980b9;
+        }
+
+        .no-data {
+            text-align: center;
+            font-style: italic;
+            color: #888;
+            padding: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Trang Quản Trị Người Dùng</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Ngày Giờ Đăng Nhập</th>
+                    <th>Đồng Ý/Không</th>
+                    <th>Ngày Rảnh</th>
+                    <th>Món Ăn</th>
+                    <th>Đồ Uống</th>
+                    <th>Địa Điểm Đi Chơi</th>
+                    <th>Hành Động</th>
+                </tr>
+            </thead>
+            <tbody id="userData">
+            </tbody>
+        </table>
+        <div id="noDataMessage" class="no-data" style="display: none;">Không có dữ liệu người dùng.</div>
+        <button class="btn-clear" aria-label="Xóa Tất Cả" onclick="clearData()">Xóa Tất Cả</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyC0c5jFNMvVctwRqzyiwNzBQ7vDn3Df1jQ",
+            authDomain: "tranminh-814.firebaseapp.com",
+            databaseURL: "https://tranminh-814-default-rtdb.firebaseio.com/",
+            projectId: "tranminh-814",
+            storageBucket: "tranminh-814.firebasestorage.app",
+            messagingSenderId: "1018105013867",
+            appId: "1:1018105013867:web:d69026421ec254126bb32e",
+            measurementId: "G-Q3GMFXQ2PF"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            addUserData();
+            displayUserData();
+        });
+
+        function addUserData() {
+            const consent = localStorage.getItem('consent') || 'Chưa nhập';
+            const userData = {
+                loginTime: new Date().toLocaleString(),
+                consent: consent
+            };
+
+            if (consent === 'Vâng') {
+                userData.freeDay = localStorage.getItem('freeDay')
+                    ? new Date(localStorage.getItem('freeDay')).toLocaleDateString('vi-VN', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                    })
+                    : 'Chưa chọn';
+                userData.food = localStorage.getItem('food') || 'Chưa chọn';
+                userData.drink = localStorage.getItem('drink') || 'Chưa chọn';
+                userData.place = localStorage.getItem('place') || 'Chưa chọn';
+            }
+
+            database.ref('userDataHistory').push(userData);
+        }
+
+        function displayUserData() {
+            const userDataElement = document.getElementById('userData');
+            const noDataMessage = document.getElementById('noDataMessage');
+            userDataElement.innerHTML = '';
+
+            database.ref('userDataHistory').on('value', (snapshot) => {
+                const history = snapshot.val();
+
+                if (!history) {
+                    noDataMessage.style.display = 'block';
+                    return;
+                } else {
+                    noDataMessage.style.display = 'none';
+                }
+
+                Object.entries(history).forEach(([key, data]) => {
+                    const row = document.createElement('tr');
+                    const loginTimeCell = document.createElement('td');
+                    loginTimeCell.textContent = data.loginTime;
+                    row.appendChild(loginTimeCell);
+
+                    const consentCell = document.createElement('td');
+                    consentCell.textContent = data.consent;
+                    row.appendChild(consentCell);
+
+                    if (data.consent === 'Không Nha') {
+                        for (let i = 0; i < 4; i++) {
+                            const emptyCell = document.createElement('td');
+                            emptyCell.textContent = '';
+                            row.appendChild(emptyCell);
+                        }
+                    } else {
+                        const keys = ['freeDay', 'food', 'drink', 'place'];
+                        keys.forEach(key => {
+                            const cell = document.createElement('td');
+                            cell.textContent = data[key] || 'Chưa chọn';
+                            row.appendChild(cell);
+                        });
+                    }
+
+                    const deleteCell = document.createElement('td');
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Xóa';
+                    deleteButton.classList.add('btn-delete');
+                    deleteButton.onclick = function () {
+                        database.ref(`userDataHistory/${key}`).remove();
+                    };
+                    deleteCell.appendChild(deleteButton);
+                    row.appendChild(deleteCell);
+                    userDataElement.appendChild(row);
+                });
+            });
+        }
+
+        function clearData() {
+            database.ref('userDataHistory').remove();
+        }
+    </script>
+</body>
+
+</html>
